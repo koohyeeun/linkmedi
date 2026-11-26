@@ -47,9 +47,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
-  .brand span { display: block; width: fit-content; margin: 2px 0 0; font-size: 11px; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; }
+  .brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand .logo { width: 40px; height: 40px; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+  .brand span { display: block; width: fit-content; margin: 2px 0 0; font-size: 11px; white-space: nowrap; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; }
   .lang-select {
     background: rgba(255,255,255,0.15);
     color: white;
@@ -330,7 +333,7 @@
 
 <header>
   <div class="header-inner">
-    <div class="brand">Link Medi <span>거제 조선업 안전·재활</span></div>
+    <div class="brand"><svg class="logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lmbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#0b1530"/></linearGradient><linearGradient id="lmac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#99f6e4"/><stop offset="1" stop-color="#38bdf8"/></linearGradient><clipPath id="lmcl"><rect width="64" height="64" rx="16"/></clipPath></defs><g clip-path="url(#lmcl)"><rect width="64" height="64" fill="url(#lmbg)"/></g><circle cx="32" cy="32" r="27" stroke="#fff" stroke-opacity=".22" stroke-width="2.5" fill="none"/><path d="M32 5A27 27 0 0 1 49.4 11.3" stroke="url(#lmac)" stroke-width="4" stroke-linecap="round" fill="none"/><g transform="translate(7 6) scale(.8)"><path d="M26 45L37 22L49 33M26 45V58" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="40.5" cy="12.5" r="6.2" fill="#fff"/><g fill="#0b1530" stroke="url(#lmac)" stroke-width="3"><circle cx="26" cy="45" r="3.6"/><circle cx="37" cy="22" r="3.6"/></g></g></svg><div>Link Medi <span>거제 조선업 안전·재활</span></div></div>
     <div style="display:flex; align-items:center;"><button class="share-btn" onclick="openShare()">🔗 공유</button>
     <select class="lang-select" id="langSelect" onchange="toggleLang()">
       <option value="ko">한국어</option>
@@ -1009,6 +1012,13 @@ function renderComparison() {
 }
 
 // ==================== 공유 (링크 복사 · QR) ====================
+// 파비콘: 헤더 로고와 동일 아이콘
+(function () {
+  const link = document.createElement("link");
+  link.rel = "icon";
+  link.href = "data:image/svg+xml," + encodeURIComponent(document.querySelector(".brand .logo").outerHTML);
+  document.head.appendChild(link);
+})();
 function openShare() {
   const url = location.href.split("#")[0];
   document.getElementById("shareUrl").value = url;
