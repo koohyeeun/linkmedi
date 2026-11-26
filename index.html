@@ -49,7 +49,7 @@
     align-items: center;
   }
   .brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
-  .brand span { font-size: 12px; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; margin-left: 6px; }
+  .brand span { display: block; width: fit-content; margin: 2px 0 0; font-size: 11px; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; }
   .lang-select {
     background: rgba(255,255,255,0.15);
     color: white;
@@ -311,6 +311,10 @@
     margin: 12px 0;
   }
 
+  .share-btn { white-space: nowrap; flex-shrink: 0; background: rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.35); border-radius:6px; padding:4px 8px; font-size:13px; cursor:pointer; margin-right:6px; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-box { background:#fff; border-radius:14px; padding:18px; width:100%; max-width:360px; text-align:center; }
+  .url-box { width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:13px; margin:8px 0; }
   .disclaimer {
     font-size: 11.5px;
     color: var(--muted);
@@ -327,12 +331,26 @@
 <header>
   <div class="header-inner">
     <div class="brand">Link Medi <span>거제 조선업 안전·재활</span></div>
+    <div style="display:flex; align-items:center;"><button class="share-btn" onclick="openShare()">🔗 공유</button>
     <select class="lang-select" id="langSelect" onchange="toggleLang()">
       <option value="ko">한국어</option>
       <option value="en">English (Worker)</option>
-    </select>
+    </select></div>
   </div>
 </header>
+
+<div id="shareModal" class="modal-bg hidden" onclick="if(event.target===this)closeShare()">
+  <div class="modal-box">
+    <h2>🔗 Link Medi 공유하기</h2>
+    <p class="sub-desc">아래 링크나 QR코드로 다른 사람도 바로 열어볼 수 있어요.</p>
+    <img id="shareQr" alt="QR 코드" width="180" height="180" style="border:1px solid #e5e7eb; border-radius:8px;">
+    <input class="url-box" id="shareUrl" readonly onclick="this.select()">
+    <button class="btn-primary" onclick="copyShareUrl()">📋 링크 복사</button>
+    <button class="btn-outline hidden" id="nativeShareBtn" onclick="nativeShare()">📤 다른 앱으로 공유</button>
+    <button class="btn-outline" onclick="closeShare()">닫기</button>
+    <div class="disclaimer" id="shareNote"></div>
+  </div>
+</div>
 
 <!-- 상단 5단계 진행 표시 -->
 <div class="stepper">
@@ -989,6 +1007,26 @@ function renderComparison() {
   }
   document.getElementById('oneLineCommentBox').innerText = comment;
 }
+
+// ==================== 공유 (링크 복사 · QR) ====================
+function openShare() {
+  const url = location.href.split("#")[0];
+  document.getElementById("shareUrl").value = url;
+  document.getElementById("shareQr").src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(url);
+  document.getElementById("nativeShareBtn").classList.toggle("hidden", !navigator.share);
+  const local = /^(localhost|127\.|192\.168\.|file)/.test(location.hostname) || location.protocol === "file:";
+  document.getElementById("shareNote").innerText = local
+    ? "※ 지금은 내 기기 주소예요. 다른 사람이 열려면 GitHub Pages 등에 배포한 주소로 공유하세요."
+    : "※ 링크에는 개인 정보가 포함되지 않아요.";
+  document.getElementById("shareModal").classList.remove("hidden");
+}
+function closeShare() { document.getElementById("shareModal").classList.add("hidden"); }
+async function copyShareUrl() {
+  const url = document.getElementById("shareUrl").value;
+  try { await navigator.clipboard.writeText(url); alert("✅ 링크가 복사되었어요."); }
+  catch (e) { document.getElementById("shareUrl").select(); document.execCommand("copy"); alert("✅ 링크가 복사되었어요."); }
+}
+function nativeShare() { navigator.share({ title: "Link Medi", url: location.href.split("#")[0] }).catch(() => {}); }
 
 function toggleLang() {
   const lang = document.getElementById('langSelect').value;
