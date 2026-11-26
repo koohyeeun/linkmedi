@@ -1,24 +1,1001 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Link Medi</title>
-  <meta name="theme-color" content="#0b1530">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2064%2064%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2360a5fa%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231d4ed8%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M20%2046%20L30%2022%20L46%2030%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2222%22%20r%3D%225%22%20fill%3D%22%230b1530%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2246%22%20r%3D%223.5%22%20fill%3D%22%23fff%22%2F%3E%3Ccircle%20cx%3D%2246%22%20cy%3D%2230%22%20r%3D%223.5%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Medi - 거제 조선업 근로자 AI 자세 위험도 분석 & 병원 연계</title>
+<!-- MediaPipe Pose & Drawing Utils -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --primary: #0f4c81;
+    --primary-light: #e8f1fa;
+    --accent: #0078d4;
+    --danger: #d93025;
+    --warning: #f29900;
+    --success: #188038;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #d1d5db;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* 상단 헤더 */
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .header-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+  .brand span { font-size: 12px; font-weight: 500; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; margin-left: 6px; }
+  .lang-select {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .lang-select option { color: #000; }
+
+  /* 단계 내비게이션 바 */
+  .stepper {
+    max-width: 640px;
+    margin: 12px auto 0;
+    padding: 0 12px;
+    display: flex;
+    gap: 4px;
+  }
+  .step-pill {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 2px;
+    border-radius: 6px;
+    background: #e5e7eb;
+    color: #6b7280;
+    cursor: pointer;
+  }
+  .step-pill.active { background: var(--primary); color: white; }
+  .step-pill.done { background: #cfe2f3; color: var(--primary); }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 12px 12px 40px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #eaedf2;
+  }
+  .hidden { display: none !important; }
+
+  h2 { font-size: 18px; margin: 0 0 6px; color: var(--primary); }
+  h3 { font-size: 15px; margin: 14px 0 8px; }
+  .sub-desc { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+
+  /* 현장 친화적 큰 버튼 & 칩 */
+  .chip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .chip-btn {
+    padding: 12px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .chip-btn.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+  .chip-btn.danger-selected {
+    border-color: var(--danger);
+    background: #fce8e6;
+    color: var(--danger);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+  .btn-outline {
+    width: 100%;
+    padding: 12px;
+    background: white;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* 통증 슬라이더 */
+  .slider-box {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+  }
+  input[type="range"] { width: 100%; margin: 8px 0; accent-color: var(--primary); }
+  .pain-val { font-size: 22px; font-weight: 800; color: var(--primary); }
+
+  /* 주의 신호 경고 배너 */
+  .alert-banner {
+    background: #fce8e6;
+    border: 1.5px solid #f28b82;
+    color: #a50e0e;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+
+  /* 영상 & 캔버스 분석 영역 */
+  .guide-box {
+    background: var(--primary-light);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .guide-box ul { margin: 4px 0 0; padding-left: 18px; }
+
+  .video-stage {
+    position: relative;
+    width: 100%;
+    background: #111827;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  #sourceVideo {
+    display: none; /* 원본 비디오는 숨기고 캔버스에 영상+관절 오버레이를 동시에 렌더링 */
+  }
+  #analysisCanvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #000;
+  }
+  .live-hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+  .hud-badge {
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .progress-wrap {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.1s linear;
+  }
+
+  /* 분석 결과 막대 & 점수 */
+  .score-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .risk-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 15px;
+    color: white;
+  }
+  .bg-low { background: var(--success); }
+  .bg-mid { background: var(--warning); }
+  .bg-high { background: var(--danger); }
+
+  .part-row { margin-bottom: 10px; }
+  .part-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .bar-bg { width: 100%; height: 10px; background: #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; }
+
+  .cross-check-box {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+
+  /* 병원 카드 */
+  .sort-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .sort-tab {
+    flex: 1; padding: 8px; border: 1px solid var(--border);
+    border-radius: 8px; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .sort-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .hospital-card {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .hospital-card.selected { border-color: var(--primary); background: var(--primary-light); }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 7px;
+    border-radius: 6px; background: #eef2ff; color: #3730a3; margin-right: 4px; font-weight: 600;
+  }
+
+  /* 비교 차트 */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;
+  }
+  .compare-box {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; text-align: center;
+  }
+  .one-line-comment {
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary);
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--primary);
+    margin: 12px 0;
+  }
+
+  .disclaimer {
+    font-size: 11.5px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12px;
+    padding: 8px;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+</style>
 </head>
 <body>
-  <header class="top">
-    <strong><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lmbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#0b1530"/></linearGradient><linearGradient id="lmac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#99f6e4"/><stop offset="1" stop-color="#38bdf8"/></linearGradient><clipPath id="lmcl"><rect width="64" height="64" rx="16"/></clipPath></defs><g clip-path="url(#lmcl)"><rect width="64" height="64" fill="url(#lmbg)"/></g><circle cx="32" cy="32" r="27" stroke="#fff" stroke-opacity=".22" stroke-width="2.5" fill="none"/><path d="M32 5A27 27 0 0 1 49.4 11.3" stroke="url(#lmac)" stroke-width="4" stroke-linecap="round" fill="none"/><g transform="translate(7 6) scale(.8)"><path d="M26 45L37 22L49 33M26 45V58" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="40.5" cy="12.5" r="6.2" fill="#fff"/><g fill="#0b1530" stroke="url(#lmac)" stroke-width="3"><circle cx="26" cy="45" r="3.6"/><circle cx="37" cy="22" r="3.6"/></g></g></svg> Link Medi</strong>
-    <span class="step" id="stepLabel"></span>
-  </header>
-  <div class="disclaimer" role="note">⚠ 의학적 진단이 아닌 참고 정보예요. 병원 연계는 항상 본인이 선택해요.</div>
-  <main id="app"></main>
-  <div id="modal" class="modal" hidden></div>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script type="module" src="app.js"></script>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">Link Medi <span>거제 조선업 안전·재활</span></div>
+    <select class="lang-select" id="langSelect" onchange="toggleLang()">
+      <option value="ko">한국어</option>
+      <option value="en">English (Worker)</option>
+    </select>
+  </div>
+</header>
+
+<!-- 상단 5단계 진행 표시 -->
+<div class="stepper">
+  <div class="step-pill active" id="pill-1" onclick="goStep(1)">① 자가설문</div>
+  <div class="step-pill" id="pill-2" onclick="goStep(2)">② 영상분석</div>
+  <div class="step-pill" id="pill-3" onclick="goStep(3)">③ 위험결과</div>
+  <div class="step-pill" id="pill-4" onclick="goStep(4)">④ 병원연계</div>
+  <div class="step-pill" id="pill-5" onclick="goStep(5)">⑤ 비교·관리</div>
+</div>
+
+<main>
+  <!-- ==================== STEP 1: 사전 단계 - 자가설문 (약 1분) ==================== -->
+  <section id="step-1" class="card">
+    <h2 data-ko="① 자가설문: 지금 어디가 불편하세요?" data-en="① Self-Check: Where does it hurt?">① 자가설문: 지금 어디가 불편하세요?</h2>
+    <p class="sub-desc">AI 영상 분석 전, 현재 내 몸 상태를 1분 안에 간단히 체크합니다. (참고용 체크)</p>
+
+    <h3>1. 불편한 부위를 모두 선택하세요</h3>
+    <div class="chip-grid" id="bodyPartChips">
+      <div class="chip-btn" data-val="목" onclick="toggleChip(this, 'parts')">목</div>
+      <div class="chip-btn" data-val="어깨" onclick="toggleChip(this, 'parts')">어깨</div>
+      <div class="chip-btn" data-val="팔꿈치" onclick="toggleChip(this, 'parts')">팔꿈치</div>
+      <div class="chip-btn" data-val="손목/손" onclick="toggleChip(this, 'parts')">손목/손</div>
+      <div class="chip-btn" data-val="허리" onclick="toggleChip(this, 'parts')">허리</div>
+      <div class="chip-btn" data-val="무릎/발" onclick="toggleChip(this, 'parts')">무릎/발</div>
+    </div>
+
+    <h3>2. 가장 불편한 부위의 통증 정도 (0~10)</h3>
+    <div class="slider-box">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px;">0 (통증 없음) ~ 10 (매우 심함)</span>
+        <span class="pain-val"><span id="painValText">5</span> / 10</span>
+      </div>
+      <input type="range" id="painSlider" min="0" max="10" value="5" oninput="document.getElementById('painValText').innerText=this.value">
+    </div>
+
+    <h3>3. 증상 빈도 및 기존 진료 이력</h3>
+    <div class="chip-grid" style="grid-template-columns: repeat(3, 1fr);" id="freqChips">
+      <div class="chip-btn selected" data-val="가끔" onclick="selectSingleChip(this, 'freq')">가끔</div>
+      <div class="chip-btn" data-val="자주" onclick="selectSingleChip(this, 'freq')">자주</div>
+      <div class="chip-btn" data-val="거의 매일" onclick="selectSingleChip(this, 'freq')">거의 매일</div>
+    </div>
+
+    <h3>4. 주의 신호 확인 (해당 시 체크)</h3>
+    <div class="chip-grid" style="grid-template-columns: 1fr 1fr;" id="redFlagChips">
+      <div class="chip-btn" data-val="저림·감각 이상" onclick="toggleRedFlag(this)">저림·감각 이상</div>
+      <div class="chip-btn" data-val="팔·다리 힘 빠짐" onclick="toggleRedFlag(this)">팔·다리 힘 빠짐</div>
+      <div class="chip-btn" data-val="밤에 통증으로 깸" onclick="toggleRedFlag(this)">밤에 통증으로 깸</div>
+      <div class="chip-btn" data-val="외상 후 심한 통증" onclick="toggleRedFlag(this)">외상 후 심한 통증</div>
+    </div>
+
+    <div id="redFlagAlert" class="alert-banner hidden">
+      ⚠️ <b>주의 신호가 확인되었습니다.</b><br>
+      영상 분석 결과와 관계없이 <b>의료진 상담을 권장</b>합니다. 분석 후 바로 병원 연계 화면으로 이동할 수 있습니다. (응급·마비 의심 시 즉시 119 연락)
+    </div>
+
+    <h3>5. 희망 병원 조건 (선택)</h3>
+    <div class="chip-grid" id="condChips">
+      <div class="chip-btn" data-val="야간진료" onclick="toggleChip(this, 'conds')">야간진료</div>
+      <div class="chip-btn" data-val="토요일/주말" onclick="toggleChip(this, 'conds')">토요일/주말</div>
+      <div class="chip-btn" data-val="외국어 가능" onclick="toggleChip(this, 'conds')">외국어 가능</div>
+    </div>
+
+    <button class="btn-primary" onclick="completeStep1()">다음: 작업 영상 업로드 및 AI 분석 →</button>
+    <div class="disclaimer">※ 본 설문은 의학적 진단이 아니며, 자세 위험도 참고 및 병원 안내를 위한 기초 자료입니다.</div>
+  </section>
+
+  <!-- ==================== STEP 2: 핵심 기능① 작업 영상 업로드 & 실시간 AI 분석 ==================== -->
+  <section id="step-2" class="card hidden">
+    <h2>② 작업 영상 업로드 & 실시간 AI 자세 분석</h2>
+    <p class="sub-desc">작업 영상을 올리면 영상이 실제로 재생되면서 관절 33점과 RULA/REBA 위험도를 실시간 분석합니다.</p>
+
+    <div class="guide-box">
+      <b>📸 촬영 및 분석 가이드</b>
+      <ul>
+        <li>전신이 보이게 <b>측면 또는 45° 각도</b>에서 촬영한 영상(10~30초 권장)</li>
+        <li>영상은 <b>내 스마트폰 브라우저 안에서만 분석</b>되며 원본은 서버나 병원에 전송되지 않습니다.</li>
+      </ul>
+    </div>
+
+    <h3>작업 종류 선택</h3>
+    <div class="chip-grid" id="workTypeChips">
+      <div class="chip-btn selected" data-val="용접" onclick="selectSingleChip(this, 'workType')">용접</div>
+      <div class="chip-btn" data-val="취부·조립" onclick="selectSingleChip(this, 'workType')">취부·조립</div>
+      <div class="chip-btn" data-val="배관" onclick="selectSingleChip(this, 'workType')">배관</div>
+      <div class="chip-btn" data-val="도장" onclick="selectSingleChip(this, 'workType')">도장</div>
+      <div class="chip-btn" data-val="의장" onclick="selectSingleChip(this, 'workType')">의장</div>
+      <div class="chip-btn" data-val="자재 취급" onclick="selectSingleChip(this, 'workType')">자재 취급</div>
+    </div>
+
+    <div style="margin: 12px 0;">
+      <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="privacyAgree" checked>
+        <span><b>[필수]</b> 건강·자세 정보 분석 동의 (영상 원본 미저장·미전송 확인)</span>
+      </label>
+    </div>
+
+    <!-- 동영상 파일 업로드 버튼 -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <label for="videoFileInput" class="btn-primary" style="text-align:center; margin-top:0; flex:2;">
+        📁 작업 영상 선택 및 AI 분석 시작
+      </label>
+      <input type="file" id="videoFileInput" accept="video/*" style="display:none;" onchange="handleVideoUpload(event)">
+    </div>
+
+    <!-- 실시간 영상 재생 & 뼈대 트래킹 캔버스 -->
+    <div id="videoAnalysisContainer" class="hidden">
+      <div class="video-stage">
+        <video id="sourceVideo" playsinline muted></video>
+        <canvas id="analysisCanvas" width="640" height="360"></canvas>
+        <div class="live-hud">
+          <div class="hud-badge" id="hudStatus">AI 모델 준비 중...</div>
+          <div class="hud-badge" id="hudScore">실시간 RULA: - / 7</div>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" id="videoProgressBar"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:4px;">
+        <span id="liveAngleText">허리 각도: -° | 목 각도: -° | 어깨: -°</span>
+        <span id="frameCountText">분석 프레임: 0</span>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn-outline" style="margin-top:0;" onclick="togglePlayPause()">⏯ 일시정지 / 재생</button>
+        <button class="btn-primary" style="margin-top:0;" id="finishAnalysisBtn" onclick="finalizeAnalysis()">분석 완료 및 결과 보기 →</button>
+      </div>
+    </div>
+
+    <button class="btn-outline" onclick="goStep(1)">← 이전 (자가설문 수정)</button>
+  </section>
+
+  <!-- ==================== STEP 3: AI 위험도 분석 결과 & 설문 교차 확인 ==================== -->
+  <section id="step-3" class="card hidden">
+    <h2>③ AI 자세 위험도 분석 결과</h2>
+    <p class="sub-desc" id="resultMetaText">작업 종류: 용접 | 분석 신뢰도: 높음 (유효 프레임 94%)</p>
+
+    <div class="score-hero">
+      <div>
+        <div style="font-size:13px; color:var(--muted);">종합 인체공학 위험도 (RULA / REBA)</div>
+        <div style="font-size:22px; font-weight:800; margin-top:2px;">
+          RULA <span id="resRulaScore">6</span>/7점 · REBA <span id="resRebaScore">10</span>/15점
+        </div>
+      </div>
+      <div class="risk-badge bg-high" id="resRiskBadge">위험도 높음</div>
+    </div>
+
+    <!-- 설문 x 영상 교차 확인 -->
+    <div class="cross-check-box" id="crossCheckBox">
+      🔍 <b>설문 × 영상 교차 확인:</b> 분석 중...
+    </div>
+
+    <h3>부위별 과부하 위험 구간 비율</h3>
+    <div id="partBarsContainer"></div>
+
+    <div style="background:#f3f4f6; padding:12px; border-radius:10px; font-size:13px; margin-top:12px;">
+      <b>💡 현장 맞춤 스트레칭 & 자세 주의 팁</b>
+      <p id="ergoTipText" style="margin:6px 0 0;">허리 굽힘 구간이 길어 척추 기립근 피로가 누적됩니다. 작업 중간 1시간마다 1분씩 허리 뒤로 젖히기 스트레칭을 권장합니다.</p>
+    </div>
+
+    <button class="btn-primary" onclick="goStep(4)">④ 내 조건에 맞는 병원 연계 알아보기 →</button>
+    <button class="btn-outline" onclick="goStep(5)">병원 연계 없이 ⑤ 사후관리(이전 영상 비교)로 이동</button>
+    <div class="disclaimer">※ 의학적 진단이 아닌 자세 위험도 참고 정보입니다. 단일 카메라 2D 추정 특성상 손목 각도는 참고 수준으로 표시됩니다.</div>
+  </section>
+
+  <!-- ==================== STEP 4: 핵심 기능② 병원 연계 및 분석 요약서 전달 ==================== -->
+  <section id="step-4" class="card hidden">
+    <h2>④ 병원 연계 및 분석 요약서 전달</h2>
+    <p class="sub-desc">광고 없이 공개된 정렬 기준으로 병원을 고르고, 내가 선택한 요약 항목만 전달합니다.</p>
+
+    <div class="sort-tabs">
+      <button class="sort-tab active" onclick="sortHospitals('recommend', this)">추천순 (조건일치)</button>
+      <button class="sort-tab" onclick="sortHospitals('distance', this)">거리순 (거제 기준)</button>
+      <button class="sort-tab" onclick="sortHospitals('popular', this)">인기순 (예시)</button>
+    </div>
+    <div style="font-size:11.5px; color:var(--muted); margin-bottom:10px;" id="sortExplainText">
+      ℹ️ 정렬 기준: 설문 부위 진료과 일치도 + 선택한 희망 조건(야간·주말·외국어) 충족 개수 순
+    </div>
+
+    <div id="hospitalListContainer"></div>
+
+    <h3>병원에 보낼 분석 요약서 (항목 직접 선택)</h3>
+    <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px; font-size:13px;">
+      <label style="display:block; margin-bottom:6px;"><input type="checkbox" checked disabled> <b>위험도 점수·등급</b> (<span id="sumRiskText">RULA 6/7 - 높음</span>)</label>
+      <label style="display:block; margin-bottom:6px;"><input type="checkbox" id="sumCheckWork" checked> <b>부담 부위·작업 종류</b> (<span id="sumWorkText">용접 / 허리·어깨</span>)</label>
+      <label style="display:block; margin-bottom:6px;"><input type="checkbox" id="sumCheckPain" checked> <b>자가설문 통증 정도·주의신호</b> (<span id="sumPainText">통증 5/10</span>)</label>
+      <label style="display:block; margin-bottom:6px;"><input type="checkbox" id="sumCheckTrend" checked> <b>이전 영상 대비 변화 요약</b></label>
+      <div style="color:var(--danger); font-size:12px; margin-top:6px; font-weight:600;">
+        🔒 작업 영상 원본은 병원에 절대 전달되지 않습니다.
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="sendHospitalSummary()">선택한 병원으로 요약서 보내기 (본인 선택)</button>
+    <button class="btn-outline" onclick="goStep(5)">연계하지 않고 ⑤ 사후관리 비교로 이동</button>
+  </section>
+
+  <!-- ==================== STEP 5: 핵심 기능③ 사후관리 (이전 영상 비교 · 한 줄 코멘트) ==================== -->
+  <section id="step-5" class="card hidden">
+    <h2>⑤ 사후관리: 이전 영상 비교 & 한 줄 코멘트</h2>
+    <p class="sub-desc">복귀 후 같은 작업을 다시 촬영해 올리면 이전 기록과 비교해 변화를 한 줄로 알려줍니다.</p>
+
+    <div class="compare-grid">
+      <div class="compare-box">
+        <div style="font-size:12px; color:var(--muted);">이전 작업 영상 (기준 기록)</div>
+        <div style="font-size:18px; font-weight:800; margin:4px 0;" id="prevSummaryVal">허리 위험 42%</div>
+        <div style="font-size:12px;" id="prevRulaVal">RULA 6점 · 통증 7점</div>
+      </div>
+      <div class="compare-box" style="border-color:var(--primary); background:var(--primary-light);">
+        <div style="font-size:12px; color:var(--primary); font-weight:700;">이번 분석 영상 (현재)</div>
+        <div style="font-size:18px; font-weight:800; margin:4px 0; color:var(--primary);" id="currSummaryVal">허리 위험 26%</div>
+        <div style="font-size:12px;" id="currRulaVal">RULA 4점 · 통증 5점</div>
+      </div>
+    </div>
+
+    <div class="one-line-comment" id="oneLineCommentBox">
+      💬 "지난번보다 허리 숙임 구간이 16%p 줄었어요. 어깨 들어올림은 아직 주의가 필요해요."
+    </div>
+
+    <h3>현재 몸 상태 재확인 (0~10)</h3>
+    <div class="slider-box">
+      <div style="display:flex; justify-content:space-between;">
+        <span style="font-size:13px;">0 (편안함) ~ 10 (매우 불편함)</span>
+        <span class="pain-val"><span id="rePainVal">4</span> / 10</span>
+      </div>
+      <input type="range" id="rePainSlider" min="0" max="10" value="4" oninput="document.getElementById('rePainVal').innerText=this.value">
+    </div>
+
+    <button class="btn-primary" onclick="goStep(4)">🏥 병원 재연계하기 (본인 선택)</button>
+    <button class="btn-outline" onclick="alert('✅ 자가 관리 계속하기가 선택되었습니다.\n2주 후 동일 각도 재촬영 알림이 설정되었습니다.'); goStep(2);">💪 자가 관리 계속하기 (새 영상 추가 비교)</button>
+  </section>
+</main>
+
+<script>
+// ==================== 전역 상태 관리 ====================
+const state = {
+  parts: [],
+  pain: 5,
+  freq: '가끔',
+  redFlags: [],
+  conds: [],
+  workType: '용접',
+  // 현재 분석 데이터
+  analysis: null,
+  // 이전 기록 (초기 시연용 기준 데이터, 새 영상 분석 시 직전 영상이 자동 저장되어 비교됨)
+  previousRecord: {
+    date: '직전 기록',
+    workType: '용접',
+    rula: 6,
+    reba: 11,
+    pain: 7,
+    partRisks: { '허리': 44, '어깨': 35, '목': 28, '팔꿈치': 18 }
+  },
+  selectedHospitalId: 1
+};
+
+// 거제 지역 연계 병원 예시 데이터 (PRD 기준)
+const hospitals = [
+  { id: 1, name: '거제 정형외과 의원 (예시)', dept: '정형외과·도수재활', dist: 1.2, night: true, weekend: true, english: true, pop: 92, desc: '고현동 · 야간진료(20시) · 영어 진료 가능' },
+  { id: 2, name: '옥포 재활의학과의원 (예시)', dept: '재활의학과·통증클리닉', dist: 2.5, night: false, weekend: true, english: true, pop: 88, desc: '옥포동 · 토요일 정상진료 · 영어 상담 지원' },
+  { id: 3, name: '장평 직업환경·근골격 클리닉 (예시)', dept: '직업환경의학과·정형외과', dist: 0.8, night: true, weekend: false, english: false, pop: 81, desc: '장평동 · 조선소 인근 · 평일 야간진료' }
+];
+
+// ==================== 네비게이션 & 설문 UI ====================
+function goStep(stepNum) {
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById(`step-${i}`).classList.toggle('hidden', i !== stepNum);
+    const pill = document.getElementById(`pill-${i}`);
+    pill.classList.remove('active', 'done');
+    if (i === stepNum) pill.classList.add('active');
+    else if (i < stepNum) pill.classList.add('done');
+  }
+  if (stepNum === 4) renderHospitals('recommend');
+  if (stepNum === 5) renderComparison();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleChip(el, key) {
+  el.classList.toggle('selected');
+  const val = el.dataset.val;
+  if (state[key].includes(val)) state[key] = state[key].filter(v => v !== val);
+  else state[key].push(val);
+}
+
+function selectSingleChip(el, key) {
+  el.parentElement.querySelectorAll('.chip-btn').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state[key] = el.dataset.val;
+}
+
+function toggleRedFlag(el) {
+  el.classList.toggle('danger-selected');
+  const val = el.dataset.val;
+  if (state.redFlags.includes(val)) state.redFlags = state.redFlags.filter(v => v !== val);
+  else state.redFlags.push(val);
+  document.getElementById('redFlagAlert').classList.toggle('hidden', state.redFlags.length === 0);
+}
+
+function completeStep1() {
+  state.pain = parseInt(document.getElementById('painSlider').value, 10);
+  if (state.parts.length === 0) {
+    state.parts = ['허리']; // 미선택 시 기본값 보완
+  }
+  goStep(2);
+}
+
+// ==================== MediaPipe Pose 실시간 영상 분석 엔진 ====================
+let pose = null;
+let isAnalyzing = false;
+let animFrameId = null;
+
+// 프레임별 누적 지표
+let frameStats = {
+  totalFrames: 0,
+  validFrames: 0,
+  trunkHighFrames: 0, // 허리 굽힘 위험 프레임
+  neckHighFrames: 0,  // 목 굽힘 위험 프레임
+  shoulderHighFrames: 0, // 어깨 거상 위험 프레임
+  elbowHighFrames: 0, // 팔꿈치 부담 프레임
+  rulaSum: 0,
+  rebaSum: 0
+};
+
+function initMediaPipePose() {
+  if (pose) return;
+  pose = new Pose({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+  });
+  pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  pose.onResults(onPoseResults);
+}
+
+// 세 점의 2D 각도 계산 (도 단위)
+function calcAngle2D(a, b, c) {
+  if (!a || !b || !c) return 0;
+  const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  let deg = Math.abs(rad * 180.0 / Math.PI);
+  if (deg > 180) deg = 360 - deg;
+  return deg;
+}
+
+// 수직선 기준 기울기 각도 (허리/목 숙임 측정용)
+function calcVerticalTilt(top, bottom) {
+  if (!top || !bottom) return 0;
+  const dx = Math.abs(top.x - bottom.x);
+  const dy = Math.abs(bottom.y - top.y);
+  return Math.atan2(dx, dy) * (180 / Math.PI);
+}
+
+function handleVideoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!document.getElementById('privacyAgree').checked) {
+    alert('건강·자세 정보 분석 동의에 체크해 주세요.');
+    return;
+  }
+
+  // 기존 분석 결과가 있다면 이전 기록으로 백업 (사후관리 비교용)
+  if (state.analysis) {
+    state.previousRecord = {
+      date: '직전 분석 영상',
+      workType: state.analysis.workType,
+      rula: state.analysis.rula,
+      reba: state.analysis.reba,
+      pain: state.pain,
+      partRisks: { ...state.analysis.partRisks }
+    };
+  }
+
+  initMediaPipePose();
+
+  const video = document.getElementById('sourceVideo');
+  const canvas = document.getElementById('analysisCanvas');
+  const url = URL.createObjectURL(file);
+
+  // 통계 초기화
+  frameStats = {
+    totalFrames: 0, validFrames: 0,
+    trunkHighFrames: 0, neckHighFrames: 0, shoulderHighFrames: 0, elbowHighFrames: 0,
+    rulaSum: 0, rebaSum: 0
+  };
+
+  document.getElementById('videoAnalysisContainer').classList.remove('hidden');
+  document.getElementById('hudStatus').innerText = 'AI 관절 분석 중...';
+
+  video.src = url;
+  video.onloadedmetadata = () => {
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 360;
+    video.play();
+    isAnalyzing = true;
+    processVideoFrame();
+  };
+
+  video.onended = () => {
+    isAnalyzing = false;
+    document.getElementById('hudStatus').innerText = '✅ 영상 분석 완료';
+    finalizeAnalysis();
+  };
+}
+
+async function processVideoFrame() {
+  const video = document.getElementById('sourceVideo');
+  if (!isAnalyzing || video.paused || video.ended) return;
+
+  if (video.duration) {
+    const pct = Math.min(100, (video.currentTime / video.duration) * 100);
+    document.getElementById('videoProgressBar').style.width = `${pct}%`;
+  }
+
+  await pose.send({ image: video });
+  animFrameId = requestAnimationFrame(processVideoFrame);
+}
+
+function togglePlayPause() {
+  const video = document.getElementById('sourceVideo');
+  if (video.paused) {
+    video.play();
+    isAnalyzing = true;
+    processVideoFrame();
+  } else {
+    video.pause();
+    isAnalyzing = false;
+  }
+}
+
+// MediaPipe Pose 결과 프레임마다 실시간 그리기 & RULA/REBA 계산
+function onPoseResults(results) {
+  const canvas = document.getElementById('analysisCanvas');
+  const ctx = canvas.getContext('2d');
+  frameStats.totalFrames++;
+
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // 실제 동영상 프레임을 캔버스에 렌더링
+  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+  if (results.poseLandmarks) {
+    const lm = results.poseLandmarks;
+    // 신뢰도 확인 (어깨·골반 가시성)
+    const vis = ((lm[11]?.visibility || 0) + (lm[12]?.visibility || 0) + (lm[23]?.visibility || 0) + (lm[24]?.visibility || 0)) / 4;
+
+    if (vis > 0.35) {
+      frameStats.validFrames++;
+
+      // 좌우 평균 좌표 산출
+      const ear = { x: (lm[7].x + lm[8].x) / 2, y: (lm[7].y + lm[8].y) / 2 };
+      const shoulder = { x: (lm[11].x + lm[12].x) / 2, y: (lm[11].y + lm[12].y) / 2 };
+      const hip = { x: (lm[23].x + lm[24].x) / 2, y: (lm[23].y + lm[24].y) / 2 };
+
+      // 1) 주요 인체공학 각도 계산
+      const trunkAngle = Math.round(calcVerticalTilt(shoulder, hip)); // 허리(몸통) 숙임 각도
+      const neckAngle = Math.round(calcVerticalTilt(ear, shoulder));  // 목 숙임 각도
+      const shoulderAngle = Math.round(Math.max(
+        calcAngle2D(lm[23], lm[11], lm[13]),
+        calcAngle2D(lm[24], lm[12], lm[14])
+      )); // 팔 들어올림 각도
+      const elbowAngle = Math.round(Math.min(
+        calcAngle2D(lm[11], lm[13], lm[15]),
+        calcAngle2D(lm[12], lm[14], lm[16])
+      ));
+
+      // 2) RULA / REBA 규칙 기반 위험 판정
+      let frameRula = 2;
+      if (trunkAngle > 20) { frameRula += 2; frameStats.trunkHighFrames++; }
+      else if (trunkAngle > 10) { frameRula += 1; }
+
+      if (neckAngle > 20) { frameRula += 1; frameStats.neckHighFrames++; }
+      if (shoulderAngle > 45) { frameRula += 2; frameStats.shoulderHighFrames++; }
+      if (elbowAngle < 60 || elbowAngle > 120) { frameStats.elbowHighFrames++; }
+
+      frameRula = Math.min(7, Math.max(1, frameRula));
+      const frameReba = Math.min(15, Math.round(frameRula * 1.8));
+
+      frameStats.rulaSum += frameRula;
+      frameStats.rebaSum += frameReba;
+
+      // 위험도에 따라 뼈대 색상 실시간 변경 (초록 -> 주황 -> 빨강)
+      const boneColor = frameRula >= 5 ? '#ff3b30' : (frameRula >= 3 ? '#ff9500' : '#34c759');
+      drawConnectors(ctx, lm, POSE_CONNECTIONS, { color: boneColor, lineWidth: 4 });
+      drawLandmarks(ctx, lm, { color: '#ffffff', fillColor: boneColor, lineWidth: 2, radius: 4 });
+
+      // 실시간 HUD & 텍스트 업데이트
+      document.getElementById('hudScore').innerText = `실시간 RULA: ${frameRula} / 7`;
+      document.getElementById('liveAngleText').innerText = `허리: ${trunkAngle}° | 목: ${neckAngle}° | 어깨: ${shoulderAngle}°`;
+      document.getElementById('frameCountText').innerText = `유효 프레임: ${frameStats.validFrames}`;
+    }
+  }
+  ctx.restore();
+}
+
+// 분석 종료 및 결과 화면(STEP 3) 생성
+function finalizeAnalysis() {
+  const video = document.getElementById('sourceVideo');
+  video.pause();
+  isAnalyzing = false;
+
+  const valid = Math.max(1, frameStats.validFrames);
+  const confidence = frameStats.totalFrames > 0 ? Math.round((frameStats.validFrames / frameStats.totalFrames) * 100) : 85;
+
+  const avgRula = frameStats.validFrames > 0 ? Math.max(1, Math.min(7, Math.round(frameStats.rulaSum / valid))) : 5;
+  const avgReba = frameStats.validFrames > 0 ? Math.max(1, Math.min(15, Math.round(frameStats.rebaSum / valid))) : 9;
+
+  const partRisks = {
+    '허리': Math.min(95, Math.round((frameStats.trunkHighFrames / valid) * 100)),
+    '어깨': Math.min(95, Math.round((frameStats.shoulderHighFrames / valid) * 100)),
+    '목': Math.min(95, Math.round((frameStats.neckHighFrames / valid) * 100)),
+    '팔꿈치': Math.min(95, Math.round((frameStats.elbowHighFrames / valid) * 100))
+  };
+
+  state.analysis = {
+    workType: state.workType,
+    rula: avgRula,
+    reba: avgReba,
+    confidence: confidence,
+    partRisks: partRisks
+  };
+
+  renderResultStep();
+  goStep(3);
+}
+
+function renderResultStep() {
+  const a = state.analysis;
+  const confLabel = a.confidence >= 75 ? '높음' : (a.confidence >= 45 ? '보통' : '낮음');
+  document.getElementById('resultMetaText').innerText = `작업 종류: ${a.workType} | 분석 신뢰도: ${confLabel} (인식률 ${a.confidence}%)`;
+  document.getElementById('resRulaScore').innerText = a.rula;
+  document.getElementById('resRebaScore').innerText = a.reba;
+
+  const badge = document.getElementById('resRiskBadge');
+  badge.className = 'risk-badge ' + (a.rula >= 5 ? 'bg-high' : (a.rula >= 3 ? 'bg-mid' : 'bg-low'));
+  badge.innerText = a.rula >= 5 ? '위험도 높음' : (a.rula >= 3 ? '위험도 보통' : '위험도 낮음');
+
+  // 부위별 막대 렌더링
+  const container = document.getElementById('partBarsContainer');
+  container.innerHTML = '';
+  const highVideoParts = [];
+
+  Object.entries(a.partRisks).forEach(([part, pct]) => {
+    if (pct >= 25) highVideoParts.push(part);
+    const color = pct >= 40 ? 'var(--danger)' : (pct >= 20 ? 'var(--warning)' : 'var(--success)');
+    const levelText = pct >= 40 ? '높음' : (pct >= 20 ? '중간' : '낮음');
+    container.innerHTML += `
+      <div class="part-row">
+        <div class="part-header">
+          <span>${part} 과부하 구간</span>
+          <span style="color:${color}">${levelText} (${pct}%)</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.max(8, pct)}%; background:${color};"></div></div>
+      </div>
+    `;
+  });
+
+  // 설문 x 영상 교차 확인
+  const matched = state.parts.filter(p => highVideoParts.some(vp => p.includes(vp) || vp.includes(p)));
+  const crossBox = document.getElementById('crossCheckBox');
+  if (matched.length > 0) {
+    crossBox.innerHTML = `🔍 <b>설문 × 영상 교차 확인:</b> 내가 아프다고 체크한 <b>[${matched.join(', ')}]</b> 부위가 실제 작업 영상에서도 높은 부담 구간으로 확인되었습니다.`;
+  } else {
+    crossBox.innerHTML = `🔍 <b>설문 × 영상 교차 확인:</b> 설문 부위([${state.parts.join(', ')}]) 외에 작업 자세에서는 <b>[${highVideoParts.join(', ') || '허리·어깨'}]</b>의 반복 부하가 관찰됩니다.`;
+  }
+}
+
+// ==================== STEP 4: 병원 연계 & 요약서 ====================
+function sortHospitals(mode, btnEl) {
+  if (btnEl) {
+    document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  const list = [...hospitals];
+  if (mode === 'distance') {
+    list.sort((a, b) => a.dist - b.dist);
+    document.getElementById('sortExplainText').innerText = 'ℹ️ 정렬 기준: 거제 주요 조선소(고현·장평·옥포) 기준 거리순';
+  } else if (mode === 'popular') {
+    list.sort((a, b) => b.pop - a.pop);
+    document.getElementById('sortExplainText').innerText = 'ℹ️ 정렬 기준: 서비스 내 근로자 익명 연계 선택 예시 순 (광고 미반영)';
+  } else {
+    // 추천순: 희망 조건 일치 개수 계산
+    list.sort((a, b) => {
+      const scoreA = (state.conds.includes('야간진료') && a.night ? 1 : 0) + (state.conds.includes('토요일/주말') && a.weekend ? 1 : 0) + (state.conds.includes('외국어 가능') && a.english ? 1 : 0);
+      const scoreB = (state.conds.includes('야간진료') && b.night ? 1 : 0) + (state.conds.includes('토요일/주말') && b.weekend ? 1 : 0) + (state.conds.includes('외국어 가능') && b.english ? 1 : 0);
+      return scoreB - scoreA;
+    });
+    document.getElementById('sortExplainText').innerText = 'ℹ️ 정렬 기준: 설문 부위 진료과 일치도 + 선택한 희망 조건(야간·주말·외국어) 충족 개수 순';
+  }
+  renderHospitals(null, list);
+}
+
+function renderHospitals(mode, customList) {
+  const list = customList || hospitals;
+  const container = document.getElementById('hospitalListContainer');
+  container.innerHTML = '';
+
+  list.forEach(h => {
+    const isSel = h.id === state.selectedHospitalId;
+    container.innerHTML += `
+      <div class="hospital-card ${isSel ? 'selected' : ''}" onclick="state.selectedHospitalId=${h.id}; renderHospitals(null);">
+        <div style="display:flex; justify-content:space-between; font-weight:700;">
+          <span>${h.name}</span>
+          <span style="color:var(--primary); font-size:13px;">${h.dist}km</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--muted); margin:4px 0;">${h.desc}</div>
+        <div>
+          <span class="tag">${h.dept}</span>
+          ${h.night ? '<span class="tag">야간진료</span>' : ''}
+          ${h.weekend ? '<span class="tag">주말진료</span>' : ''}
+          ${h.english ? '<span class="tag">English</span>' : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  if (state.analysis) {
+    document.getElementById('sumRiskText').innerText = `RULA ${state.analysis.rula}/7 · REBA ${state.analysis.reba}/15`;
+    document.getElementById('sumWorkText').innerText = `${state.workType} / ${state.parts.join(', ')}`;
+    document.getElementById('sumPainText').innerText = `통증 ${state.pain}/10 (${state.freq})`;
+  }
+}
+
+function sendHospitalSummary() {
+  const target = hospitals.find(h => h.id === state.selectedHospitalId);
+  alert(`📤 [${target.name}]으로 분석 요약서 전달이 완료되었습니다!\n\n- 전달 항목: 위험도 점수, 작업 종류(${state.workType}), 불편 부위(${state.parts.join(', ')})\n- 영상 원본은 전달되지 않았습니다.`);
+  goStep(5);
+}
+
+// ==================== STEP 5: 사후관리 (이전 영상 비교 · 규칙 기반 한 줄 코멘트) ====================
+function renderComparison() {
+  const prev = state.previousRecord;
+  const curr = state.analysis || { rula: 4, partRisks: { '허리': 26, '어깨': 32 } };
+
+  const prevWaist = prev.partRisks['허리'] || 40;
+  const currWaist = curr.partRisks['허리'] || 25;
+  const diff = currWaist - prevWaist;
+
+  document.getElementById('prevSummaryVal').innerText = `허리 위험 ${prevWaist}%`;
+  document.getElementById('prevRulaVal').innerText = `RULA ${prev.rula}점 · 통증 ${prev.pain}점`;
+
+  document.getElementById('currSummaryVal').innerText = `허리 위험 ${currWaist}%`;
+  document.getElementById('currRulaVal').innerText = `RULA ${curr.rula}점 · 통증 ${state.pain}점`;
+
+  // PRD 규칙 기반 한 줄 코멘트 생성 (개선 / 유지 / 악화)
+  let comment = '';
+  if (diff <= -10) {
+    comment = `💬 "지난번보다 허리 숙임 위험 구간이 ${Math.abs(diff)}%p 줄었어요. 어깨 들어올림 자세도 함께 유의하세요."`;
+  } else if (diff >= 10) {
+    comment = `💬 "이번엔 허리 숙임 구간이 ${diff}%p 늘었어요. 불편감이 지속되면 병원 연계를 선택할 수 있어요."`;
+  } else {
+    comment = `💬 "허리·어깨 부담 구간이 지난번과 비슷해요(${currWaist}%). 같은 각도로 주기적 확인을 권장해요."`;
+  }
+  document.getElementById('oneLineCommentBox').innerText = comment;
+}
+
+function toggleLang() {
+  const lang = document.getElementById('langSelect').value;
+  if (lang === 'en') {
+    alert('English Worker Mode: Key labels and hospital summary support English translation for Geoje shipyard workers.');
+  }
+}
+</script>
 </body>
 </html>
-
